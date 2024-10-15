@@ -10,6 +10,7 @@ from pydub import AudioSegment
 from threading import Thread
 import time
 import sys
+import random
 
 parser = argparse.ArgumentParser(description="DevOps Terminal Symphony Script")
 parser.add_argument("--config", help="Path to configuration file", required=False)
@@ -97,9 +98,13 @@ def type_text(text, color, reset_color, duration):
     char_count = len(text)
     typing_interval = min(0.05, duration / max(char_count, 1))
     for char in text:
+        # Simulate human-like typing with slight randomness
         sys.stdout.write(f"{font_size_start}{color}{char}{reset_color}{font_size_reset}")
         sys.stdout.flush()
-        time.sleep(typing_interval)
+        time.sleep(typing_interval * random.uniform(0.8, 1.2))  # Adding randomness to the typing speed
+        # Add cursor blinking effect
+        sys.stdout.write("\033[5 q")  # Set blinking cursor
+        sys.stdout.flush()
 
 # Clear the screen once at the beginning
 sys.stdout.write("\033[H\033[J")
@@ -133,6 +138,12 @@ for entry in transcript:
         print(f"{font_size_start}\033[1m\033[38;5;214mCode Snippet:\033[0m{font_size_reset}")
         print(f"{font_size_start}\033[1;32m{entry['code']}\033[0m{font_size_reset}")  # Display the code in green color
         print()  # Add an extra blank line for readability
+
+        # Simulate code execution
+        execution_message = "\033[1;33m[Executing... Done]\033[0m"
+        sys.stdout.write(f"{execution_message}\n")
+        sys.stdout.flush()
+        time.sleep(1)  # Pause to simulate code execution time
 
     # Wait until the end time of this entry
     while time.time() - start_time < entry["end"]:
