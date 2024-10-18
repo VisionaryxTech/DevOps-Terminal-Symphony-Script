@@ -133,8 +133,8 @@ for entry in transcript:
     print("\033[0m")  # Reset to normal after the dialogue
     print()  # Add an extra blank line for readability
 
-    # Check if there is code to display
-    if entry['code']:
+    # Check if there is non-empty code to display
+    if entry['code'].strip():
         print(f"{font_size_start}\033[1m\033[38;5;214mCode Snippet:\033[0m{font_size_reset}")
         print(f"{font_size_start}\033[1;32m{entry['code']}\033[0m{font_size_reset}")  # Display the code in green color
         print()  # Add an extra blank line for readability
