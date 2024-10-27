@@ -46,11 +46,13 @@ def load_transcript(csv_path):
     with open(csv_path, 'r') as file:
         reader = csv.DictReader(file)
         for row in reader:
-            start_time = row.get('Start Timecode', '0:00:00.00')
-            end_time = row.get('End Timecode', '0:00:00.00')
+            start_time = row.get('Start Timecode', '0:00:00:00000')
+            end_time = row.get('End Timecode', '0:00:00:00000')
             try:
-                start_seconds = sum(float(x) * 60 ** i for i, x in enumerate(reversed(start_time.split(':'))))
-                end_seconds = sum(float(x) * 60 ** i for i, x in enumerate(reversed(end_time.split(':'))))
+                start_parts = start_time.split(':')
+                end_parts = end_time.split(':')
+                start_seconds = int(start_parts[0]) * 3600 + int(start_parts[1]) * 60 + int(start_parts[2]) + int(start_parts[3]) / 100000
+                end_seconds = int(end_parts[0]) * 3600 + int(end_parts[1]) * 60 + int(end_parts[2]) + int(end_parts[3]) / 100000
             except ValueError:
                 start_seconds = 0
                 end_seconds = 0
@@ -77,6 +79,10 @@ speaker_colors = {
 font_size_start = "\033#6"  # Set double-height and double-width text (larger font)
 font_size_reset = "\033#3"  # Reset to normal size
 
+# Terminal height (assuming 50 lines for simplicity)
+terminal_height = 50
+current_line = 0
+
 # Play Audio and Display Transcript
 stop_threads = False
 
@@ -92,9 +98,10 @@ audio_thread = Thread(target=play_audio)
 audio_thread.start()
 
 start_time = time.time()
-episode_number = 13  # Episode number
+episode_number = 7  # Episode number
 
 def type_text(text, color, reset_color, duration):
+    global current_line
     char_count = len(text)
     typing_interval = min(0.05, duration / max(char_count, 1))
     for char in text:
@@ -105,6 +112,13 @@ def type_text(text, color, reset_color, duration):
         # Add cursor blinking effect
         sys.stdout.write("\033[5 q")  # Set blinking cursor
         sys.stdout.flush()
+        
+        # Update current line count
+        if char == '\n':
+            current_line += 1
+        if current_line >= terminal_height:
+            sys.stdout.write("\033[H\033[J")  # Clear the screen
+            current_line = 0
 
 # Clear the screen once at the beginning
 sys.stdout.write("\033[H\033[J")
@@ -122,6 +136,7 @@ for entry in transcript:
                     f"Episode {episode_number} @ Visionaryx - {speaker_color}{entry['speaker']}{reset_color} "
                     f"\033[1;33m~\033[0m \033[1;34m(main) (git:master)\033[0m{font_size_reset}")
     print(f"{shell_prompt}")
+    current_line += 2  # Account for the prompt and the blank line
     print()  # Add a blank line between shell prompt and dialogue
     sys.stdout.write(f"{font_size_start}\033[1m\033[38;5;15m$ \033[0m{font_size_reset}")  # Add a bold and bright white command prompt symbol
     sys.stdout.flush()
@@ -132,22 +147,35 @@ for entry in transcript:
     type_text(entry['text'], speaker_color, reset_color, duration)
     print("\033[0m")  # Reset to normal after the dialogue
     print()  # Add an extra blank line for readability
+    current_line += 2
 
     # Check if there is non-empty code to display
     if entry['code'].strip():
-        print(f"{font_size_start}\033[1m\033[38;5;214mCode Snippet:\033[0m{font_size_reset}")
+        print(f"{font_size_start}\033[1m\033[38;5;214mCS:\033[0m{font_size_reset}")
         print(f"{font_size_start}\033[1;32m{entry['code']}\033[0m{font_size_reset}")  # Display the code in green color
         print()  # Add an extra blank line for readability
+        current_line += 3
 
         # Simulate code execution
-        execution_message = "\033[1;33m[Executing... Done]\033[0m"
+        execution_message = "\033[1;33m[\u2713]\033[0m"
         sys.stdout.write(f"{execution_message}\n")
         sys.stdout.flush()
         time.sleep(1)  # Pause to simulate code execution time
+        current_line += 1
+
+        # Remove the execution message to simulate scrolling
+        if current_line >= terminal_height - 1:
+            sys.stdout.write("\033[F\033[K")  # Move cursor up one line and clear line
+            current_line -= 1
 
     # Wait until the end time of this entry
     while time.time() - start_time < entry["end"]:
         time.sleep(0.01)
+
+    # Ensure the screen is filled before clearing
+    if current_line >= terminal_height:
+        sys.stdout.write("\033[H\033[J")  # Clear the screen
+        current_line = 0
 
 # Stop the time display thread
 stop_threads = True
